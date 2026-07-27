@@ -1,0 +1,939 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rubric Audit — AI Cost Evaluation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --paper:#F7F8F3;
+    --bar:#DBE7D4;
+    --bar-soft:#EAF1E5;
+    --ink:#16241C;
+    --ink-2:#4A5C50;
+    --ink-3:#77877C;
+    --rule:#9FB49B;
+    --rule-soft:#C7D5C2;
+    --met:#2C6B45;
+    --partial:#8A6212;
+    --missing:#A32A1F;
+    --focus:#1F5FA8;
+    --mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+    --sans:"IBM Plex Sans", ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+    --line:28px;
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:15px;
+    line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ── continuous-feed sheet ─────────────────────────── */
+  .sheet{
+    max-width:1080px;
+    margin:0 auto;
+    display:grid;
+    grid-template-columns:36px 1fr;
+    border-left:1px solid var(--rule-soft);
+    border-right:1px solid var(--rule-soft);
+    background:var(--paper);
+    min-height:100vh;
+  }
+  .sprockets{
+    border-right:1px dashed var(--rule);
+    background-image:radial-gradient(circle at 18px 18px, #FFFFFF 4.5px, var(--rule-soft) 5.2px, transparent 6px);
+    background-size:36px 36px;
+    background-repeat:repeat-y;
+  }
+  .page{padding:0 clamp(16px,4vw,44px) 72px}
+
+  /* ── printed form header ───────────────────────────── */
+  header{padding:38px 0 22px}
+  .formline{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ink-3);
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px 18px;
+    border-bottom:1px solid var(--rule);
+    padding-bottom:8px;
+  }
+  h1{
+    font-family:var(--mono);
+    font-weight:700;
+    font-size:clamp(30px,6vw,50px);
+    letter-spacing:-.02em;
+    line-height:1.02;
+    margin:22px 0 0;
+    text-transform:uppercase;
+  }
+  h1 .thin{font-weight:400;color:var(--ink-2);display:block}
+  .lede{max-width:56ch;margin:16px 0 0;color:var(--ink-2)}
+
+  /* ── shared block chrome ───────────────────────────── */
+  .block{margin-top:36px}
+  .blocktitle{
+    font-family:var(--mono);
+    font-size:11px;
+    font-weight:600;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--ink-2);
+    display:flex;
+    align-items:baseline;
+    gap:12px;
+    margin:0 0 10px;
+  }
+  .blocktitle::after{
+    content:"";
+    flex:1;
+    height:1px;
+    background:var(--rule-soft);
+  }
+
+  /* ── input ─────────────────────────────────────────── */
+  textarea{
+    width:100%;
+    min-height:300px;
+    padding:13px 16px;
+    border:1px solid var(--rule);
+    border-radius:2px;
+    background-color:#FFFFFF;
+    background-image:repeating-linear-gradient(
+      to bottom,
+      var(--bar-soft) 0, var(--bar-soft) var(--line),
+      #FFFFFF var(--line), #FFFFFF calc(var(--line) * 2)
+    );
+    background-attachment:local;
+    background-position:0 13px;
+    font-family:var(--mono);
+    font-size:13.5px;
+    line-height:var(--line);
+    color:var(--ink);
+    resize:vertical;
+  }
+  textarea::placeholder{color:var(--ink-3)}
+
+  .meterbar{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:10px 22px;
+    margin-top:12px;
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--ink-2);
+  }
+  .meterbar b{font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+  .spacer{flex:1}
+
+  button{
+    font-family:var(--mono);
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    padding:11px 18px;
+    border:1px solid var(--ink);
+    border-radius:2px;
+    background:var(--ink);
+    color:var(--paper);
+    cursor:pointer;
+    transition:transform .12s ease, background .12s ease;
+  }
+  button:hover{transform:translateY(-1px)}
+  button:active{transform:translateY(0)}
+  button[disabled]{opacity:.45;cursor:not-allowed;transform:none}
+  button.ghost{background:transparent;color:var(--ink);border-color:var(--rule)}
+  button.ghost:hover{background:var(--bar-soft)}
+  :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+  /* ── perforation ───────────────────────────────────── */
+  .perf{
+    margin:44px -12px 0;
+    border-top:1px dashed var(--rule);
+    position:relative;
+  }
+  .perf span{
+    position:absolute;
+    top:-8px;
+    left:50%;
+    transform:translateX(-50%);
+    background:var(--paper);
+    padding:0 12px;
+    font-family:var(--mono);
+    font-size:10px;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    color:var(--ink-3);
+  }
+
+  /* ── convergence meter ─────────────────────────────── */
+  .score{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:flex-end;
+    gap:18px 28px;
+    padding:22px 0 20px;
+    border-bottom:2px solid var(--ink);
+  }
+  .tally{
+    font-family:var(--mono);
+    font-size:clamp(38px,9vw,64px);
+    font-weight:700;
+    line-height:.9;
+    letter-spacing:-.03em;
+    font-variant-numeric:tabular-nums;
+  }
+  .tally small{font-size:.34em;font-weight:500;letter-spacing:.12em;color:var(--ink-2);display:block;margin-top:10px;text-transform:uppercase}
+  .segments{display:flex;gap:5px;flex:1;min-width:200px;align-items:flex-end}
+  .seg{
+    flex:1;
+    height:46px;
+    border:1px solid var(--rule);
+    background:#FFF;
+    position:relative;
+    overflow:hidden;
+  }
+  .seg i{
+    position:absolute;left:0;right:0;bottom:0;
+    background:var(--ink);
+    height:0;
+    transition:height .5s cubic-bezier(.2,.7,.3,1);
+  }
+  .seg[data-s="met"] i{background:var(--met);height:100%}
+  .seg[data-s="partial"] i{background:var(--partial);height:50%}
+  .seg[data-s="missing"] i{background:var(--missing);height:6px}
+  .seg em{
+    position:absolute;top:4px;left:5px;
+    font-family:var(--mono);font-size:10px;font-style:normal;
+    color:var(--ink-3);
+  }
+  .verdict{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:.06em;
+    color:var(--ink-2);
+    width:100%;
+  }
+
+  /* ── ledger rows ───────────────────────────────────── */
+  .row{
+    display:grid;
+    grid-template-columns:44px 1fr;
+    gap:0 16px;
+    padding:20px 14px 22px;
+    border-bottom:1px solid var(--rule-soft);
+  }
+  .row:nth-child(odd){background:var(--bar-soft)}
+  .row .idx{
+    font-family:var(--mono);
+    font-size:13px;
+    font-weight:600;
+    color:var(--ink-3);
+    padding-top:2px;
+    font-variant-numeric:tabular-nums;
+  }
+  .rowhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px}
+  .rowhead h3{
+    font-family:var(--mono);
+    font-size:14px;
+    font-weight:600;
+    letter-spacing:.02em;
+    text-transform:uppercase;
+    margin:0;
+  }
+  .status{
+    font-family:var(--mono);
+    font-size:10.5px;
+    font-weight:600;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    padding:3px 8px;
+    border:1px solid currentColor;
+    border-radius:2px;
+    white-space:nowrap;
+  }
+  .status[data-s="met"]{color:var(--met)}
+  .status[data-s="partial"]{color:var(--partial)}
+  .status[data-s="missing"]{color:var(--missing)}
+  .criterion{color:var(--ink-2);font-size:13.5px;margin:8px 0 0;max-width:74ch}
+  .field{margin-top:12px;max-width:74ch}
+  .field .k{
+    font-family:var(--mono);
+    font-size:10px;
+    font-weight:600;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--ink-3);
+    display:block;
+    margin-bottom:3px;
+  }
+  .field .v{margin:0}
+  .field.quote .v{
+    font-family:var(--mono);
+    font-size:12.5px;
+    border-left:2px solid var(--rule);
+    padding-left:10px;
+    color:var(--ink-2);
+  }
+  .field.action .v{
+    border-left:2px solid var(--missing);
+    padding-left:10px;
+  }
+  .row[data-s="met"] .field.action .v{border-left-color:var(--met)}
+
+  /* line-printer feed animation */
+  .row, .score{animation:feed .34s cubic-bezier(.2,.7,.3,1) both}
+  @keyframes feed{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none !important;transition:none !important}
+  }
+
+  /* ── revision queue ────────────────────────────────── */
+  ol.queue{margin:0;padding-left:22px;max-width:74ch}
+  ol.queue li{margin-bottom:10px}
+  ol.queue li::marker{font-family:var(--mono);font-weight:600;color:var(--ink-3)}
+
+  /* ── criteria reference ────────────────────────────── */
+  details{border-top:1px solid var(--rule-soft);padding:14px 0}
+  summary{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    cursor:pointer;
+    color:var(--ink-2);
+  }
+  details ul{margin:14px 0 0;padding-left:20px;max-width:78ch;color:var(--ink-2);font-size:14px}
+  details li{margin-bottom:8px}
+
+  .note{
+    font-family:var(--mono);
+    font-size:11.5px;
+    color:var(--ink-3);
+    margin-top:10px;
+    line-height:1.6;
+  }
+  /* ── file drop ─────────────────────────────────────── */
+  .dropzone{position:relative}
+  .drophint{
+    position:absolute;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background:rgba(219,231,212,.94);
+    border:2px dashed var(--met);
+    border-radius:2px;
+    pointer-events:none;
+  }
+  .dropzone.over .drophint{display:flex}
+  .drophint span{
+    font-family:var(--mono);
+    font-size:12px;
+    font-weight:600;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--met);
+  }
+  .filechip{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:6px 14px;
+    margin-top:12px;
+    padding:10px 14px;
+    border:1px solid var(--rule);
+    border-left:3px solid var(--met);
+    border-radius:2px;
+    background:#FFF;
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--ink-2);
+  }
+  .filechip .name{font-weight:600;color:var(--ink)}
+  .filechip[data-mode="scanned"]{border-left-color:var(--partial)}
+  .filechip button{
+    padding:4px 9px;
+    font-size:10px;
+    letter-spacing:.12em;
+    background:transparent;
+    color:var(--ink-2);
+    border-color:var(--rule);
+  }
+  .filechip button:hover{background:var(--bar-soft)}
+  .flag{
+    border:1px solid var(--partial);
+    color:var(--partial);
+    padding:10px 12px;
+    border-radius:2px;
+    font-family:var(--mono);
+    font-size:12px;
+    margin-top:14px;
+  }
+  .hidden{display:none !important}
+
+  @media (max-width:640px){
+    .sheet{grid-template-columns:1fr}
+    .sprockets{display:none}
+    .row{grid-template-columns:1fr;gap:6px}
+    .row .idx{padding-top:0}
+  }
+  @media print{
+    .sprockets,.no-print{display:none}
+    .sheet{grid-template-columns:1fr;border:0}
+    body{background:#fff}
+    .row{break-inside:avoid}
+  }
+</style>
+
+<div class="sheet">
+  <div class="sprockets" aria-hidden="true"></div>
+  <div class="page">
+
+    <header>
+      <div class="formline">
+        <span>Form 5-TOK</span>
+        <span>AI cost evaluation</span>
+        <span>Convergence target: 5 of 5</span>
+        <span id="stamp">Rev 07-26</span>
+      </div>
+      <h1>Rubric<br>Audit<span class="thin">Token cost analysis</span></h1>
+      <p class="lede">Drop in a PDF or paste a learner's cost-evaluation write-up. The audit reads it against all five rubric criteria and returns, for each one, what the text already earns and the exact revision that would make it converge.</p>
+    </header>
+
+    <section class="block no-print">
+      <h2 class="blocktitle">Submission</h2>
+      <div class="dropzone" id="drop">
+        <textarea id="input" spellcheck="false" placeholder="Drop a PDF anywhere on this box, or paste the learner's write-up — the use case, the token counts, the pricing math, the scenario comparison, and the analysis."></textarea>
+        <div class="drophint" aria-hidden="true"><span>Release to read the PDF</span></div>
+      </div>
+      <div class="filechip hidden" id="chip"></div>
+      <div class="meterbar">
+        <span>Words <b id="words">0</b></span>
+        <span>Characters <b id="chars">0</b></span>
+        <span>Tokens ≈ <b id="tokens">0</b></span>
+        <span class="spacer"></span>
+        <input type="file" id="file" accept=".pdf,.txt,.md,application/pdf,text/plain" class="hidden">
+        <button class="ghost" id="open">Open file</button>
+        <button class="ghost" id="sample">Load sample</button>
+        <button class="ghost" id="clear">Clear</button>
+        <button id="run">Run audit</button>
+      </div>
+      <p class="note" id="hint">PDF text is pulled out in the browser and dropped into the box above, so you can check and edit it before grading. Scanned pages carry no text layer — those are sent to the model as the document itself. If the model call fails, the audit falls back to an on-page keyword pass and labels the result accordingly.</p>
+      <div class="flag hidden" id="flag"></div>
+    </section>
+
+    <div class="perf no-print"><span>Tear here</span></div>
+
+    <section id="report" class="block" aria-live="polite"></section>
+
+    <details class="no-print">
+      <summary>Rubric as written</summary>
+      <ul id="rubriclist"></ul>
+    </details>
+
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ── rubric ──────────────────────────────────────────────────────── */
+  var RUBRIC = [
+    {
+      id:1,
+      label:"Token counts",
+      text:"The learner constructs an evaluation of the cost of an AI system by executing a business-relevant AI transaction and accurately identifying both input and output token counts using a tokenizer tool.",
+      needs:[
+        {name:"a named tokenizer tool", re:/tokeniz|tiktoken|token counter|cl100k|o200k|byte[- ]pair|bpe|anthropic token|count_tokens/i},
+        {name:"an input token figure", re:/(input|prompt)[^.\n]{0,40}?\d[\d,]*\s*(tokens?)?|\d[\d,]*\s*(input|prompt)\s*tokens?/i},
+        {name:"an output token figure", re:/(output|completion|response)[^.\n]{0,40}?\d[\d,]*\s*(tokens?)?|\d[\d,]*\s*(output|completion)\s*tokens?/i},
+        {name:"an actual transaction that was run", re:/\b(ran|executed|submitted|sent|prompted|I asked|the model returned|response was)\b/i}
+      ]
+    },
+    {
+      id:2,
+      label:"Cost at scale",
+      text:"The learner constructs an evaluation of the cost of an AI system by calculating the cost of the AI transaction using a pricing tool and modeling usage at scale through at least one defined API call scenario.",
+      needs:[
+        {name:"a pricing tool or published rate", re:/pricing (tool|page|calculator)|price per|per (million|1m|1,000,000|1k|thousand) tokens|\$\s?\d+(\.\d+)?\s*\/\s*(m|1m|million|1k)/i},
+        {name:"a per-transaction cost figure", re:/\$\s?\d*\.?\d+|\d+(\.\d+)?\s*(cents?|usd|dollars)/i},
+        {name:"a defined volume", re:/\b\d[\d,]*\s*(calls?|requests?|transactions?|queries|conversations?|tickets?|users?)\b|per (day|week|month|year)|monthly|daily/i},
+        {name:"a scaled total", re:/(monthly|annual|yearly|total)[^.\n]{0,30}(cost|spend)|cost[^.\n]{0,20}(per month|per year|at scale)/i}
+      ]
+    },
+    {
+      id:3,
+      label:"Parameter variation",
+      text:"The learner constructs an evaluation of the cost of an AI system by experimenting with and comparing at least one variation in parameters such as input length, output length, or usage volume to assess the impact on total cost.",
+      needs:[
+        {name:"a second scenario to compare", re:/scenario (2|b|two)|variation|second (test|run|scenario)|versus|\bvs\.?\b|compared? (to|with)|baseline/i},
+        {name:"the parameter that was changed", re:/(input|output|prompt|response|context)\s*(length|size|tokens)|usage volume|\bvolume\b|number of calls|max_tokens/i},
+        {name:"the direction of the change", re:/doubl|halv|increas|decreas|reduc|shorten|lengthen|trim|expand|from\s*\d[\d,]*\s*(to)\s*\d/i},
+        {name:"the cost effect of the change", re:/(cost|spend|price)[^.\n]{0,60}(rose|fell|increas|decreas|higher|lower|jump|drop|×|x\b|%|percent)|(increas|decreas|reduc)[^.\n]{0,30}(cost|spend)/i}
+      ]
+    },
+    {
+      id:4,
+      label:"Use case & parameters",
+      text:"The learner constructs an evaluation of the cost of an AI system by describing a realistic use case for AI implementation and clearly explaining the parameters selected for testing.",
+      needs:[
+        {name:"a named business use case", re:/use case|customer (support|service)|help ?desk|summar|classif|onboarding|invoice|triage|chatbot|call center|marketing copy|code review|intake|knowledge base/i},
+        {name:"an organizational context", re:/\b(team|company|firm|department|business|clinic|store|agency|startup|our|client)\b/i},
+        {name:"the parameters chosen for testing", re:/parameters?|settings?|assumptions?|model (choice|selected)|temperature|max_tokens|context window|I (chose|selected|set|assumed)/i},
+        {name:"a reason those parameters were chosen", re:/\bbecause\b|\bsince\b|in order to|reflects|represents|typical|realistic|to mirror|justif|rationale/i}
+      ]
+    },
+    {
+      id:5,
+      label:"Analysis of results",
+      text:"The learner constructs an evaluation of the cost of an AI system by analyzing the results of the cost calculations and explaining how pricing varies across scenarios or platforms.",
+      needs:[
+        {name:"an interpretation, not just numbers", re:/analysis|the results show|this (means|suggests|indicates)|takeaway|driver|therefore|conclu|implicat|finding/i},
+        {name:"a comparison across scenarios or platforms", re:/across (scenarios?|platforms?|models?|providers?)|scenario \d[^.\n]{0,20}(vs|versus|compared)|gpt|gemini|claude|open ?ai|llama|mistral|tier|cheaper than|more expensive than/i},
+        {name:"why the prices differ", re:/(output|input) tokens? (cost|are|is)[^.\n]{0,30}(more|less|higher|lower|\d+x)|price difference|because[^.\n]{0,60}(token|model|tier|rate)|weighted|ratio/i},
+        {name:"a decision or recommendation", re:/recommend|I would|we should|best (option|choice|value)|worth|justif|trade[- ]?off|budget/i}
+      ]
+    }
+  ];
+
+  var STATUS_LABEL = {met:"Met", partial:"Partial", missing:"Not met"};
+
+  /* ── elements ────────────────────────────────────────────────────── */
+  var $ = function(id){ return document.getElementById(id); };
+  var input=$("input"), report=$("report"), flag=$("flag"), runBtn=$("run");
+
+  RUBRIC.forEach(function(c){
+    var li=document.createElement("li");
+    li.textContent=c.text;
+    $("rubriclist").appendChild(li);
+  });
+
+  /* ── live counts ─────────────────────────────────────────────────── */
+  function estimateTokens(t){
+    if(!t.trim()) return 0;
+    var words=t.trim().split(/\s+/).length;
+    return Math.max(1, Math.round((t.length/4 + words*1.33)/2));
+  }
+  function updateCounts(){
+    var t=input.value;
+    $("chars").textContent=t.length.toLocaleString();
+    $("words").textContent=(t.trim()?t.trim().split(/\s+/).length:0).toLocaleString();
+    $("tokens").textContent=estimateTokens(t).toLocaleString();
+  }
+  input.addEventListener("input",updateCounts);
+
+  /* ── file intake ─────────────────────────────────────────────────── */
+  var PDFJS_SRC="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+  var PDFJS_WORKER="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  var attached=null;          // {name, pages, base64, scanned}
+  var pdfjsPromise=null;
+
+  function loadPdfJs(){
+    if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+    if(pdfjsPromise) return pdfjsPromise;
+    pdfjsPromise=new Promise(function(res,rej){
+      var s=document.createElement("script");
+      s.src=PDFJS_SRC;
+      s.onload=function(){
+        if(!window.pdfjsLib) return rej(new Error("PDF reader did not initialise"));
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS_WORKER;
+        res(window.pdfjsLib);
+      };
+      s.onerror=function(){ rej(new Error("PDF reader could not be downloaded")); };
+      document.head.appendChild(s);
+    });
+    return pdfjsPromise;
+  }
+
+  function readAsBase64(file){
+    return new Promise(function(res,rej){
+      var r=new FileReader();
+      r.onload=function(){ res(String(r.result).split(",")[1]); };
+      r.onerror=function(){ rej(new Error("The file could not be read")); };
+      r.readAsDataURL(file);
+    });
+  }
+  function readAsText(file){
+    return new Promise(function(res,rej){
+      var r=new FileReader();
+      r.onload=function(){ res(String(r.result)); };
+      r.onerror=function(){ rej(new Error("The file could not be read")); };
+      r.readAsText(file);
+    });
+  }
+
+  function pageText(page){
+    return page.getTextContent().then(function(c){
+      var out="", lastY=null;
+      c.items.forEach(function(it){
+        if(!it.str) return;
+        var y=it.transform&&it.transform[5];
+        if(lastY!==null && typeof y==="number" && Math.abs(y-lastY)>2) out+="\n";
+        else if(out && !/\s$/.test(out) && !/^\s/.test(it.str)) out+=" ";
+        out+=it.str;
+        if(typeof y==="number") lastY=y;
+      });
+      return out;
+    });
+  }
+
+  function extractPdf(file){
+    return readAsBase64(file).then(function(b64){
+      return loadPdfJs().then(function(lib){
+        var bytes=Uint8Array.from(atob(b64), function(c){ return c.charCodeAt(0); });
+        return lib.getDocument({data:bytes}).promise;
+      }).then(function(doc){
+        var jobs=[];
+        for(var p=1;p<=doc.numPages;p++) jobs.push(doc.getPage(p).then(pageText));
+        return Promise.all(jobs).then(function(pages){
+          var text=pages.join("\n\n").replace(/[ \t]+\n/g,"\n").replace(/\n{3,}/g,"\n\n").trim();
+          return {
+            name:file.name,
+            pages:doc.numPages,
+            base64:b64,
+            text:text,
+            scanned:(text.length/doc.numPages)<100
+          };
+        });
+      }).catch(function(err){
+        // Reader unavailable — still gradeable by sending the document itself.
+        return {name:file.name, pages:0, base64:b64, text:"", scanned:true, reason:err.message};
+      });
+    });
+  }
+
+  function showChip(f){
+    attached=f;
+    var chip=$("chip");
+    chip.dataset.mode=f.scanned?"scanned":"text";
+    var facts=[];
+    if(f.pages) facts.push(f.pages+(f.pages===1?" page":" pages"));
+    if(f.scanned) facts.push("no text layer — the model will read the document directly");
+    else facts.push(f.text.trim().split(/\s+/).length.toLocaleString()+" words extracted");
+    chip.innerHTML='<span class="name">'+esc(f.name)+'</span><span>'+esc(facts.join(" · "))+
+      '</span><span class="spacer" style="flex:1"></span><button type="button" id="detach">Remove file</button>';
+    chip.classList.remove("hidden");
+    $("detach").addEventListener("click",detach);
+  }
+  function detach(){
+    attached=null;
+    $("chip").classList.add("hidden");
+    $("chip").innerHTML="";
+    flag.classList.add("hidden");
+  }
+
+  function intake(file){
+    if(!file) return;
+    flag.classList.add("hidden");
+    var isPdf=/\.pdf$/i.test(file.name)||file.type==="application/pdf";
+    var isText=/\.(txt|md|markdown)$/i.test(file.name)||/^text\//.test(file.type);
+
+    if(!isPdf && !isText){
+      warn("That file type is not supported. Drop a PDF, or a .txt or .md file.");
+      return;
+    }
+    if(file.size>25*1024*1024){
+      warn("That file is over 25 MB. Export a lighter PDF or paste the text instead.");
+      return;
+    }
+
+    if(isText){
+      readAsText(file).then(function(t){
+        input.value=t; updateCounts(); detach();
+        showChip({name:file.name,pages:0,base64:null,text:t,scanned:false});
+      }).catch(function(e){ warn(e.message); });
+      return;
+    }
+
+    $("open").disabled=true;
+    var prev=input.placeholder;
+    input.placeholder="Reading "+file.name+"…";
+    extractPdf(file).then(function(f){
+      input.value=f.text;
+      updateCounts();
+      showChip(f);
+      if(f.scanned){
+        warn(f.reason
+          ? "Text could not be pulled from this PDF ("+f.reason+"). The audit will send the document itself to the model."
+          : "This PDF has no text layer, so nothing was extracted to edit. The audit will send the document itself to the model.");
+      }
+    }).catch(function(e){ warn(e.message); })
+      .then(function(){ $("open").disabled=false; input.placeholder=prev; });
+  }
+  function warn(msg){ flag.textContent=msg; flag.classList.remove("hidden"); }
+
+  var drop=$("drop"), depth=0;
+  ["dragenter","dragover","dragleave","drop"].forEach(function(ev){
+    document.addEventListener(ev,function(e){ e.preventDefault(); });
+  });
+  drop.addEventListener("dragenter",function(){ depth++; drop.classList.add("over"); });
+  drop.addEventListener("dragleave",function(){ if(--depth<=0){ depth=0; drop.classList.remove("over"); } });
+  drop.addEventListener("drop",function(e){
+    depth=0; drop.classList.remove("over");
+    var files=e.dataTransfer&&e.dataTransfer.files;
+    if(files&&files.length) intake(files[0]);
+  });
+  $("open").addEventListener("click",function(){ $("file").click(); });
+  $("file").addEventListener("change",function(e){
+    if(e.target.files&&e.target.files[0]) intake(e.target.files[0]);
+    e.target.value="";
+  });
+
+  /* ── offline pass ────────────────────────────────────────────────── */
+  function localAudit(text){
+    return RUBRIC.map(function(c){
+      var hit=[], miss=[];
+      c.needs.forEach(function(n){ (n.re.test(text)?hit:miss).push(n.name); });
+      var status = hit.length>=4 ? "met" : hit.length>=2 ? "partial" : "missing";
+      var m=null;
+      for(var i=0;i<c.needs.length && !m;i++){ m=text.match(c.needs[i].re); }
+      return {
+        id:c.id,
+        status:status,
+        evidence: m ? excerpt(text, m.index) : "",
+        gap: miss.length
+          ? "The text does not clearly show " + list(miss) + "."
+          : "All four signals for this criterion appear in the text.",
+        action: miss.length
+          ? "Add a sentence that states " + list(miss.slice(0,2)) + " in explicit terms, with the numbers written out."
+          : "Tighten the wording so a grader can find each figure without hunting."
+      };
+    });
+  }
+  function list(a){
+    if(a.length===1) return a[0];
+    if(a.length===2) return a[0]+" or "+a[1];
+    return a.slice(0,-1).join(", ")+", or "+a[a.length-1];
+  }
+  function excerpt(text,i){
+    var s=Math.max(0,i-40), e=Math.min(text.length,i+80);
+    return (s>0?"…":"")+text.slice(s,e).replace(/\s+/g," ").trim()+(e<text.length?"…":"");
+  }
+
+  /* ── model pass ──────────────────────────────────────────────────── */
+  function buildPrompt(text,asDocument){
+    var criteria=RUBRIC.map(function(c){ return c.id+". "+c.text; }).join("\n");
+    return [
+      "You grade a learner's written evaluation of AI system cost against a five-part rubric.",
+      "",
+      "RUBRIC:",
+      criteria,
+      "",
+      asDocument
+        ? "The learner submission is the attached PDF. Read all of it, including any figures, tables, or screenshots of tokenizer and pricing tools."
+        : "LEARNER SUBMISSION (delimited):",
+      asDocument ? "" : "<<<",
+      asDocument ? "" : text.slice(0,12000),
+      asDocument ? "" : ">>>",
+      "",
+      "Grade each criterion independently. A criterion is \"met\" only if the submission contains the concrete artifact the criterion names (real numbers, a named tool, a defined scenario) rather than an intention to produce it. \"partial\" means part of the criterion is present but something specific is missing. \"missing\" means the criterion is not addressed.",
+      "",
+      "Return ONLY a JSON array of 5 objects, no prose, no markdown fences:",
+      "[{\"id\":1,\"status\":\"met|partial|missing\",\"evidence\":\"<=12 words quoted from the submission, or empty string\",\"gap\":\"<=25 words naming exactly what is absent or imprecise\",\"action\":\"<=35 words, an imperative revision instruction the learner can act on, referencing their own use case\"}]",
+      "",
+      "Be strict about numbers: token counts, rates, volumes, and totals must actually appear. Do not invent evidence."
+    ].join("\n");
+  }
+
+  function parseJSON(raw){
+    var t=String(raw).replace(/```json|```/g,"").trim();
+    var a=t.indexOf("["), b=t.lastIndexOf("]");
+    if(a>-1 && b>a) t=t.slice(a,b+1);
+    else if(a>-1){ t=t.slice(a); t=t.replace(/,\s*\{[^{}]*$/,"")+"]"; }
+    return JSON.parse(t);
+  }
+
+  function modelAudit(text,doc){
+    var useDoc = !!(doc && doc.base64 && doc.scanned);
+    var content = useDoc
+      ? [{type:"document",source:{type:"base64",media_type:"application/pdf",data:doc.base64}},
+         {type:"text",text:buildPrompt("",true)}]
+      : buildPrompt(text,false);
+
+    return fetch("https://api.anthropic.com/v1/messages",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        model:"claude-sonnet-4-6",
+        max_tokens:1000,
+        messages:[{role:"user",content:content}]
+      })
+    }).then(function(r){
+      if(!r.ok) throw new Error("Request failed ("+r.status+")");
+      return r.json();
+    }).then(function(d){
+      var out=(d.content||[]).map(function(i){ return i.type==="text"?i.text:""; }).join("");
+      var rows=parseJSON(out);
+      if(!Array.isArray(rows)||rows.length<5) throw new Error("Incomplete response");
+      return rows.map(function(r,i){
+        return {
+          id: Number(r.id)||i+1,
+          status: /^(met|partial|missing)$/.test(r.status)?r.status:"partial",
+          evidence: r.evidence||"",
+          gap: r.gap||"",
+          action: r.action||""
+        };
+      }).sort(function(a,b){ return a.id-b.id; });
+    });
+  }
+
+  /* ── render ──────────────────────────────────────────────────────── */
+  function render(rows, mode){
+    var met=rows.filter(function(r){return r.status==="met";}).length;
+    var gaps=rows.filter(function(r){return r.status!=="met";});
+
+    var h='<div class="score">';
+    h+='<div class="tally">'+met+'/5<small>Criteria met</small></div>';
+    h+='<div class="segments">';
+    rows.forEach(function(r,i){
+      h+='<div class="seg" data-s="'+r.status+'" title="Criterion '+(i+1)+': '+STATUS_LABEL[r.status]+'"><em>'+(i+1)+'</em><i></i></div>';
+    });
+    h+='</div>';
+    h+='<div class="verdict">'+(met===5
+        ? "Converged on all five criteria. Nothing outstanding."
+        : gaps.length+" criteri"+(gaps.length===1?"on has":"a have")+" not converged yet — "+gaps.map(function(r){return "#"+r.id;}).join(", ")+". Work the revision queue below.")
+      +'</div></div>';
+
+    rows.forEach(function(r){
+      var c=RUBRIC[r.id-1];
+      h+='<div class="row" data-s="'+r.status+'" style="animation-delay:'+(r.id*70)+'ms">';
+      h+='<div class="idx">'+String(r.id).padStart(2,"0")+'</div><div>';
+      h+='<div class="rowhead"><h3>'+esc(c.label)+'</h3><span class="status" data-s="'+r.status+'">'+STATUS_LABEL[r.status]+'</span></div>';
+      h+='<p class="criterion">'+esc(c.text)+'</p>';
+      if(r.evidence) h+=field("Found in the text","“"+esc(r.evidence)+"”","quote");
+      if(r.gap) h+=field("What is missing",esc(r.gap),"");
+      if(r.action) h+=field(r.status==="met"?"To strengthen":"To converge",esc(r.action),"action");
+      h+='</div></div>';
+    });
+
+    if(gaps.length){
+      h+='<div class="block"><h2 class="blocktitle">Revision queue</h2><ol class="queue">';
+      gaps.sort(function(a,b){ return (a.status==="missing"?0:1)-(b.status==="missing"?0:1); })
+          .forEach(function(r){
+            h+='<li><strong>'+esc(RUBRIC[r.id-1].label)+'</strong> — '+esc(r.action||r.gap)+'</li>';
+          });
+      h+='</ol></div>';
+    }
+
+    h+='<p class="note">Audit method: '+(mode==="model"
+      ? "read by Claude against the rubric text."
+      : "on-page keyword pass — the model call did not complete, so treat status flags as provisional.")
+      +' Generated '+new Date().toLocaleString()+'.</p>';
+    h+='<div class="meterbar no-print"><button class="ghost" id="copy">Copy as text</button><button class="ghost" id="print">Print</button></div>';
+
+    report.innerHTML=h;
+    $("copy").addEventListener("click",function(){ copyText(plain(rows,met,mode), this); });
+    $("print").addEventListener("click",function(){ window.print(); });
+    report.scrollIntoView({behavior:"smooth",block:"start"});
+  }
+
+  function field(k,v,cls){
+    return '<div class="field '+cls+'"><span class="k">'+k+'</span><p class="v">'+v+'</p></div>';
+  }
+  function esc(s){
+    return String(s).replace(/[&<>"]/g,function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];
+    });
+  }
+  function plain(rows,met,mode){
+    var out=["RUBRIC AUDIT — AI COST EVALUATION","Criteria met: "+met+"/5","Method: "+(mode==="model"?"model read":"keyword pass"),""];
+    rows.forEach(function(r){
+      var c=RUBRIC[r.id-1];
+      out.push(String(r.id).padStart(2,"0")+" "+c.label.toUpperCase()+" — "+STATUS_LABEL[r.status]);
+      if(r.evidence) out.push("   Found: \""+r.evidence+"\"");
+      if(r.gap) out.push("   Missing: "+r.gap);
+      if(r.action) out.push("   Action: "+r.action);
+      out.push("");
+    });
+    return out.join("\n");
+  }
+  function copyText(t,btn){
+    var done=function(){ btn.textContent="Copied"; setTimeout(function(){ btn.textContent="Copy as text"; },1600); };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(t).then(done,function(){ fallback(t,done); });
+    } else fallback(t,done);
+  }
+  function fallback(t,done){
+    var ta=document.createElement("textarea");
+    ta.value=t; ta.style.position="fixed"; ta.style.opacity="0";
+    document.body.appendChild(ta); ta.select();
+    try{ document.execCommand("copy"); done(); }catch(e){}
+    document.body.removeChild(ta);
+  }
+
+  /* ── run ─────────────────────────────────────────────────────────── */
+  function run(){
+    var text=input.value.trim();
+    var doc=attached;
+    var docOnly=!!(doc&&doc.scanned&&doc.base64);
+    flag.classList.add("hidden");
+
+    if(!docOnly && text.split(/\s+/).length<40){
+      warn("Paste at least 40 words, or drop a PDF. Below that there is not enough evidence to judge five criteria.");
+      input.focus();
+      return;
+    }
+    runBtn.disabled=true; runBtn.textContent="Reading…";
+    report.innerHTML='<p class="note">Reading '+(docOnly?esc(doc.name):"the submission")+' against all five criteria…</p>';
+
+    modelAudit(text,doc)
+      .then(function(rows){ render(rows,"model"); })
+      .catch(function(err){
+        if(docOnly){
+          warn("Model read unavailable ("+err.message+"). This PDF has no text layer, so the keyword pass has nothing to read — export a text-based PDF or paste the text.");
+          report.innerHTML="";
+          return;
+        }
+        warn("Model read unavailable ("+err.message+"). Showing the keyword pass instead.");
+        render(localAudit(text),"local");
+      })
+      .then(function(){ runBtn.disabled=false; runBtn.textContent="Run audit"; });
+  }
+
+  runBtn.addEventListener("click",run);
+  $("clear").addEventListener("click",function(){
+    input.value=""; updateCounts(); report.innerHTML=""; detach(); input.focus();
+  });
+  input.addEventListener("keydown",function(e){
+    if((e.metaKey||e.ctrlKey) && e.key==="Enter") run();
+  });
+
+  /* ── sample (deliberately partial: 2 met, 2 partial, 1 missing) ──── */
+  var SAMPLE = "Our support team at a 40-person software company answers about 900 email tickets a month. I want to test whether an AI assistant could draft the first reply for each ticket, so I ran one real ticket through the model: a customer asking why their invoice showed a duplicate charge.\n\nI pasted the prompt into a tokenizer and it came back at 412 input tokens, which includes a 180-token system prompt with our refund policy. The drafted reply came back at 268 output tokens.\n\nUsing the published rate of $3 per million input tokens and $15 per million output tokens, that single ticket costs about $0.0053. At 900 tickets a month that is roughly $4.77 a month, which is far below the cost of the hour of staff time it saves.\n\nThe reply quality was good and the tone matched our style guide, so I think this is worth piloting next quarter.";
+  $("sample").addEventListener("click",function(){
+    input.value=SAMPLE; updateCounts(); input.focus();
+  });
+
+  /* ── embeddable API ──────────────────────────────────────────────── */
+  window.RubricAudit={
+    rubric:RUBRIC,
+    readPdf:extractPdf,
+    loadFile:intake,
+    evaluate:function(text,opts){
+      opts=opts||{};
+      var doc=opts.document||null;
+      if(opts.mode==="local") return Promise.resolve({mode:"local",rows:localAudit(text)});
+      return modelAudit(text,doc).then(function(rows){ return {mode:"model",rows:rows}; })
+        .catch(function(){ return {mode:"local",rows:localAudit(text)}; });
+    },
+    render:function(result){ render(result.rows,result.mode); },
+    score:function(rows){ return rows.filter(function(r){return r.status==="met";}).length; }
+  };
+
+  updateCounts();
+})();
+</script>
